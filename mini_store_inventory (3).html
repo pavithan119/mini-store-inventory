@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Store Inventory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C2024; --steel:#4A5568; --steel-light:#7A8494; --paper:#ECEEF1; --card:#FFFFFF;
+    --amber:#D98E04; --amber-bg:#FDF3DF; --teal:#1F7A6C; --teal-bg:#E4F3EF;
+    --red:#C0392B; --red-bg:#FBE8E5; --line:#DADDE2; --line-strong:#C2C6CC;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);font-family:'Inter',system-ui,sans-serif;color:var(--ink);}
+  .wrap{max-width:1200px;margin:0 auto;padding:28px 24px 60px;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px;flex-wrap:wrap;gap:16px;}
+  .topbar h1{font-family:'Oswald',sans-serif;font-weight:600;font-size:26px;letter-spacing:0.5px;text-transform:uppercase;margin:0;}
+  .topbar .sub{font-size:13px;color:var(--steel);margin-top:4px;}
+  .stat-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:8px 16px;min-width:80px;text-align:center;}
+  .stat .n{font-family:'Oswald',sans-serif;font-size:20px;font-weight:600;}
+  .stat .l{font-size:10px;color:var(--steel);text-transform:uppercase;letter-spacing:0.4px;}
+  .stat.warn .n{color:var(--amber);}
+  .stat.danger .n{color:var(--red);}
+
+  .lowstock-banner{background:var(--amber-bg);border:1px solid var(--amber);border-left:4px solid var(--amber);border-radius:4px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:#7A4F02;display:none;}
+  .lowstock-banner.show{display:block;}
+  .lowstock-banner b{color:#5A3A01;}
+
+  .toolbar{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;}
+  .toolbar input[type=text], .toolbar select{
+    height:38px;border:1px solid var(--line-strong);border-radius:4px;padding:0 12px;font-size:14px;background:var(--card);color:var(--ink);font-family:inherit;
+  }
+  .toolbar input[type=text]{flex:1;min-width:200px;}
+  .toolbar select{min-width:150px;}
+  .btn{height:38px;padding:0 18px;border-radius:4px;border:1px solid var(--ink);background:var(--ink);color:#fff;font-weight:600;font-size:13px;letter-spacing:0.3px;cursor:pointer;text-transform:uppercase;}
+  .btn:hover{background:#333;}
+  .btn.secondary{background:var(--card);color:var(--ink);border:1px solid var(--line-strong);}
+  .btn.secondary:hover{background:var(--paper);}
+  .btn.small{height:30px;padding:0 12px;font-size:12px;}
+  .result-note{font-size:12px;color:var(--steel);margin-bottom:10px;}
+
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden;}
+  thead th{text-align:left;font-family:'Oswald',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--steel);background:var(--paper);padding:9px 10px;border-bottom:1px solid var(--line-strong);font-weight:500;}
+  tbody td{padding:9px 10px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#FAFAF9;}
+  .code{font-family:'Inter',monospace;font-size:12px;color:var(--steel);}
+  .pname{font-weight:600;}
+  .sec-tag{display:inline-block;font-size:11px;background:var(--paper);border:1px solid var(--line);border-radius:3px;padding:2px 8px;color:var(--steel);white-space:nowrap;}
+  .loc{font-family:'Inter',monospace;font-size:12px;color:var(--steel-light);}
+
+  .qty-cell{display:flex;align-items:center;gap:6px;}
+  .qty-btn{width:24px;height:24px;border-radius:3px;border:1px solid var(--line-strong);background:var(--card);cursor:pointer;font-size:14px;line-height:1;color:var(--ink);}
+  .qty-btn:hover{background:var(--paper);}
+  .qty-num{min-width:26px;text-align:center;font-weight:600;font-family:'Oswald',sans-serif;font-size:14px;}
+  .unit{font-size:11px;color:var(--steel);}
+
+  .status-pill{display:inline-block;font-size:11px;font-weight:500;padding:2px 8px;border-radius:3px;}
+  .status-pill.ok{background:var(--teal-bg);color:var(--teal);}
+  .status-pill.low{background:var(--amber-bg);color:var(--amber);}
+  .status-pill.out{background:var(--red-bg);color:var(--red);}
+
+  .row-actions{display:flex;gap:6px;}
+  .icon-btn{width:28px;height:28px;border-radius:3px;border:1px solid var(--line-strong);background:var(--card);cursor:pointer;color:var(--steel);font-size:12px;}
+  .icon-btn:hover{background:var(--paper);}
+  .icon-btn.del:hover{background:var(--red-bg);border-color:var(--red);color:var(--red);}
+
+  .pagination{display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:13px;color:var(--steel);flex-wrap:wrap;gap:10px;}
+  .pagination .pg-btns{display:flex;gap:6px;}
+
+  .empty{text-align:center;padding:50px 20px;color:var(--steel);}
+  .empty b{display:block;font-family:'Oswald',sans-serif;font-size:16px;color:var(--ink);margin-bottom:4px;text-transform:uppercase;}
+
+  .overlay{position:fixed;inset:0;background:rgba(20,22,25,0.55);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .overlay.show{display:flex;}
+  .modal{background:var(--card);border-radius:6px;width:100%;max-width:440px;padding:24px;max-height:90vh;overflow:auto;}
+  .modal h2{font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:18px;margin:0 0 18px;letter-spacing:0.4px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;color:var(--steel);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.3px;}
+  .field input,.field select{width:100%;height:38px;border:1px solid var(--line-strong);border-radius:4px;padding:0 12px;font-size:14px;font-family:inherit;color:var(--ink);}
+  .field-row{display:flex;gap:12px;}
+  .field-row .field{flex:1;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
+  .err{color:var(--red);font-size:12px;margin-top:4px;display:none;}
+  .err.show{display:block;}
+  .loading{text-align:center;padding:60px;color:var(--steel);font-size:14px;}
+
+  @media(max-width:700px){
+    .field-row{flex-direction:column;gap:0;}
+    table, thead, tbody, th, td, tr{display:block;}
+    thead{display:none;}
+    tbody tr{border-bottom:2px solid var(--line);padding:10px 0;}
+    tbody td{border:none;padding:4px 12px;display:flex;justify-content:space-between;align-items:center;}
+    tbody td:before{content:attr(data-label);font-size:11px;color:var(--steel);text-transform:uppercase;font-weight:600;}
+  }
+
+  .auth-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+  .auth-tag{font-size:11px;padding:4px 10px;border-radius:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;}
+  .auth-tag.view{background:var(--paper);color:var(--steel);border:1px solid var(--line-strong);}
+  .auth-tag.edit{background:var(--teal-bg);color:var(--teal);border:1px solid var(--teal);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div>
+      <h1>Mini store inventory</h1>
+      <div class="sub" id="subtitle">Loading...</div>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="n" id="statTotal">0</div><div class="l">Items</div></div>
+      <div class="stat warn"><div class="n" id="statLow">0</div><div class="l">Low stock</div></div>
+      <div class="stat danger"><div class="n" id="statOut">0</div><div class="l">Out of stock</div></div>
+    </div>
+  </div>
+
+  <div class="lowstock-banner" id="lowBanner"></div>
+
+  <div class="auth-row">
+    <span class="auth-tag view" id="authTag">Viewing only</span>
+    <button class="btn secondary small" id="loginBtn">Login to edit</button>
+    <button class="btn secondary small" id="logoutBtn" style="display:none;">Logout</button>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="searchBox" placeholder="Search by item name, code or location...">
+    <select id="sectionFilter"><option value="">All sections</option></select>
+    <button class="btn" id="addBtn">+ Add item</button>
+    <button class="btn secondary" id="exportBtn">Export backup</button>
+    <button class="btn secondary" id="importBtn">Import backup</button>
+    <input type="file" id="importFile" accept=".json" style="display:none;">
+  </div>
+
+  <div id="tableHolder"><div class="loading">Loading inventory...</div></div>
+  <div class="pagination" id="pagination" style="display:none;">
+    <div id="pgInfo"></div>
+    <div class="pg-btns">
+      <button class="btn secondary small" id="prevBtn">Prev</button>
+      <button class="btn secondary small" id="nextBtn">Next</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">Add item</h2>
+    <div class="field">
+      <label>Item name</label>
+      <input type="text" id="f_name" placeholder="e.g. Bearing - 22309BD1">
+      <div class="err" id="err_name">Item name is required.</div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Code no.</label>
+        <input type="text" id="f_code" placeholder="e.g. A62.01.02">
+      </div>
+      <div class="field">
+        <label>Section</label>
+        <input type="text" id="f_section" placeholder="e.g. Section 01" list="sectionList">
+        <datalist id="sectionList"></datalist>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Location (rack/shelf)</label>
+        <input type="text" id="f_location" placeholder="e.g. R1/S1/D1">
+      </div>
+      <div class="field">
+        <label>Unit</label>
+        <input type="text" id="f_unit" placeholder="Nos, Box, etc">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Quantity</label>
+        <input type="number" id="f_quantity" placeholder="0" min="0">
+        <div class="err" id="err_quantity">Enter a valid quantity.</div>
+      </div>
+      <div class="field">
+        <label>Low stock alert below</label>
+        <input type="number" id="f_threshold" placeholder="2" min="0">
+      </div>
+    </div>
+    <div class="field">
+      <label>Price per unit (Rs.)</label>
+      <input type="number" id="f_price" placeholder="0.00" min="0" step="0.01">
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" id="cancelBtn">Cancel</button>
+      <button class="btn" id="saveBtn">Save item</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="loginOverlay">
+  <div class="modal" style="max-width:340px;">
+    <h2>Editor login</h2>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="f_password" placeholder="Enter edit password">
+      <div class="err" id="err_password">Wrong password.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" id="loginCancelBtn">Cancel</button>
+      <button class="btn" id="loginSubmitBtn">Login</button>
+    </div>
+  </div>
+</div>
+
+<script type="application/json" id="seedData">[{"name":"Bearing – 6201","unit":"Nos","quantity":11,"price":870.0,"section":"Bearing","location":"C2","id":"m0","threshold":2,"code":""},{"name":"Bearing – 6408 NR","unit":"Nos","quantity":1,"price":7910.0,"section":"Bearing","location":"C2","id":"m1","threshold":2,"code":""},{"name":"Bearing – 6409","unit":"Nos","quantity":1,"price":3000.0,"section":"Bearing","location":"C2","id":"m2","threshold":2,"code":""},{"name":"Bearing – NU 310","unit":"Nos","quantity":7,"price":3500.0,"section":"Bearing","location":"C2","id":"m3","threshold":2,"code":""},{"name":"Bearing – 6314","unit":"Nos","quantity":2,"price":17805.0,"section":"Bearing","location":"C2","id":"m4","threshold":2,"code":""},{"name":"Bearing – 6203","unit":"Nos","quantity":10,"price":900.0,"section":"Bearing","location":"C2","id":"m5","threshold":2,"code":""},{"name":"Bearing – 30209 J","unit":"Nos","quantity":1,"price":3500.0,"section":"Bearing","location":"C2","id":"m6","threshold":2,"code":""},{"name":"Bearing – NU 215","unit":"Nos","quantity":2,"price":5490.0,"section":"Bearing","location":"C2","id":"m7","threshold":2,"code":""},{"name":"Bearing – NU 311","unit":"Nos","quantity":4,"price":19021.0,"section":"Bearing","location":"C2","id":"m8","threshold":2,"code":""},{"name":"Bearing – 7310","unit":"Nos","quantity":2,"price":13399.0,"section":"Bearing","location":"C2","id":"m9","threshold":2,"code":""},{"name":"Bearing – NU 215","unit":"Nos","quantity":1,"price":5490.0,"section":"Bearing","location":"C2","id":"m10","threshold":2,"code":""},{"name":"Bearing – 6409","unit":"Nos","quantity":2,"price":3000.0,"section":"Bearing","location":"C2","id":"m11","threshold":2,"code":""},{"name":"Bearing – NJ 219","unit":"Nos","quantity":1,"price":31875.0,"section":"Bearing","location":"C2","id":"m12","threshold":2,"code":""},{"name":"Bearing – 6219","unit":"Nos","quantity":1,"price":20625.0,"section":"Bearing","location":"C2","id":"m13","threshold":2,"code":""},{"name":"Bearing – RMS 16","unit":"Nos","quantity":2,"price":25000.0,"section":"Bearing","location":"C2","id":"m14","threshold":2,"code":""},{"name":"Bearing – Needle roller HK 2020","unit":"Nos","quantity":2,"price":900.0,"section":"Bearing","location":"C2","id":"m15","threshold":2,"code":""},{"name":"Bearing – 3203","unit":"Nos","quantity":3,"price":8379.0,"section":"Bearing","location":"C2","id":"m16","threshold":2,"code":""},{"name":"Bearing – 6005","unit":"Nos","quantity":2,"price":1000.0,"section":"Bearing","location":"C2","id":"m17","threshold":2,"code":""},{"name":"Bearing – NU 215","unit":"Nos","quantity":1,"price":5490.0,"section":"Bearing","location":"C2","id":"m18","threshold":2,"code":""},{"name":"Bearing – 30205 J","unit":"Nos","quantity":1,"price":1250.0,"section":"Bearing","location":"C2","id":"m19","threshold":2,"code":""},{"name":"Bearing – 30207","unit":"Nos","quantity":1,"price":2100.0,"section":"Bearing","location":"C2","id":"m20","threshold":2,"code":""},{"name":"Bearing – 4T – LM 48510","unit":"Nos","quantity":1,"price":500.0,"section":"Bearing","location":"C2","id":"m21","threshold":2,"code":""},{"name":"Bearing – 6204","unit":"Nos","quantity":4,"price":800.0,"section":"Bearing","location":"C2","id":"m22","threshold":2,"code":""},{"name":"Bearing – 6312","unit":"Nos","quantity":1,"price":12145.0,"section":"Bearing","location":"C2","id":"m23","threshold":2,"code":""},{"name":"Bearing – 6005","unit":"Nos","quantity":2,"price":1000.0,"section":"Bearing","location":"C2","id":"m24","threshold":2,"code":""},{"name":"Bearing – 907","unit":"Nos","quantity":1,"price":12100.0,"section":"Bearing","location":"C2","id":"m25","threshold":2,"code":""},{"name":"Bearing – 5209","unit":"Nos","quantity":2,"price":16350.0,"section":"Bearing","location":"C2","id":"m26","threshold":2,"code":""},{"name":"Sleeve 2310 x 45mm","unit":"Nos","quantity":5,"price":8800.0,"section":"Bearing","location":"C2","id":"m27","threshold":2,"code":""},{"name":"Bearing Percision LM48548","unit":"Nos","quantity":1,"price":2000.0,"section":"Bearing","location":"C2","id":"m28","threshold":2,"code":""},{"name":"Bearing – NJ 214 ECP","unit":"Nos","quantity":4,"price":0,"section":"Bearing","location":"S1","id":"m29","threshold":2,"code":""},{"name":"Bearing – 6411","unit":"Nos","quantity":2,"price":16800.0,"section":"Bearing","location":"S1","id":"m30","threshold":2,"code":""},{"name":"Bearing – CRM 16 A","unit":"Nos","quantity":3,"price":0,"section":"Bearing","location":"S1","id":"m31","threshold":2,"code":""},{"name":"Bearing – NU 217 ECP","unit":"Nos","quantity":1,"price":0,"section":"Bearing","location":"S1","id":"m32","threshold":2,"code":""},{"name":"Bearing – NU 2309","unit":"Nos","quantity":1,"price":12800.0,"section":"Bearing","location":"S1","id":"m33","threshold":2,"code":""},{"name":"Bearing – 2209","unit":"Nos","quantity":3,"price":23796.0,"section":"Bearing","location":"S1","id":"m34","threshold":2,"code":""},{"name":"Bearing – 1988/22","unit":"Nos","quantity":1,"price":850.0,"section":"Bearing","location":"S1","id":"m35","threshold":2,"code":""},{"name":"Cross cutter Bearing (UCF 206)","unit":"Nos","quantity":2,"price":1100.0,"section":"Bearing","location":"S1","id":"m36","threshold":2,"code":""},{"name":"Bearing – 22228","unit":"Nos","quantity":1,"price":0,"section":"Bearing","location":"S1","id":"m37","threshold":2,"code":""},{"name":"Bearing – 7315","unit":"Nos","quantity":2,"price":0,"section":"Bearing","location":"S1","id":"m38","threshold":2,"code":""},{"name":"Bearing – NTN 315","unit":"Nos","quantity":1,"price":0,"section":"Bearing","location":"S1","id":"m39","threshold":2,"code":""},{"name":"Bearing – NJ 314","unit":"Nos","quantity":1,"price":17400.0,"section":"Bearing","location":"S1","id":"m40","threshold":2,"code":""},{"name":"Bearing – 6207","unit":"Nos","quantity":1,"price":2268.0,"section":"Bearing","location":"S1","id":"m41","threshold":2,"code":""},{"name":"Bearing – 5212","unit":"Nos","quantity":1,"price":0,"section":"Bearing","location":"S1","id":"m42","threshold":2,"code":""},{"name":"Bearing – 5211","unit":"Nos","quantity":1,"price":0,"section":"Bearing","location":"S1","id":"m43","threshold":2,"code":""},{"name":"Bearing – NU 304","unit":"Nos","quantity":1,"price":5774.0,"section":"Bearing","location":"S1","id":"m44","threshold":2,"code":""},{"name":"Bearing – 7207","unit":"Nos","quantity":2,"price":0,"section":"Bearing","location":"S1","id":"m45","threshold":2,"code":""},{"name":"Bearing – NJ 216","unit":"Nos","quantity":1,"price":37917.72,"section":"Bearing","location":"S1","id":"m46","threshold":2,"code":""},{"name":"Bearing – NU 217","unit":"Nos","quantity":1,"price":0,"section":"Bearing","location":"S1","id":"m47","threshold":2,"code":""},{"name":"Bearing – 23 NU 09","unit":"Nos","quantity":2,"price":12800.0,"section":"Bearing","location":"S1","id":"m48","threshold":2,"code":""},{"name":"Bearing – NU 216","unit":"Nos","quantity":3,"price":0,"section":"Bearing","location":"S1","id":"m49","threshold":2,"code":""},{"name":"Bearing – 6312","unit":"Nos","quantity":2,"price":12145.0,"section":"Bearing","location":"S1","id":"m50","threshold":2,"code":""},{"name":"Bearing – NU 319","unit":"Nos","quantity":2,"price":0,"section":"Bearing","location":"S1","id":"m51","threshold":2,"code":""},{"name":"Bearing – NU 2307","unit":"Nos","quantity":1,"price":0,"section":"Bearing","location":"S1","id":"m52","threshold":2,"code":""},{"name":"Bearing – 23222","unit":"Nos","quantity":1,"price":0,"section":"Bearing","location":"S1","id":"m53","threshold":2,"code":""},{"name":"Bearing – 2211","unit":"Nos","quantity":1,"price":5400.0,"section":"Bearing","location":"S1","id":"m54","threshold":2,"code":""},{"name":"SG010 - SEA bearing","unit":"Nos","quantity":3,"price":0,"section":"Bearing","location":"S1","id":"m55","threshold":2,"code":""},{"name":"Bearing – 6408","unit":"Nos","quantity":1,"price":7910.0,"section":"Bearing","location":"S1","id":"m56","threshold":2,"code":""},{"name":"Bearing – 22315","unit":"Nos","quantity":2,"price":0,"section":"Bearing","location":"S1","id":"m57","threshold":2,"code":""},{"name":"Bearing – 6203","unit":"Nos","quantity":1,"price":900.0,"section":"Bearing","location":"S1","id":"m58","threshold":2,"code":""},{"name":"Bearing – 6303","unit":"Nos","quantity":1,"price":973.0,"section":"Bearing","location":"S1","id":"m59","threshold":2,"code":""},{"name":"Bearing – 6408","unit":"Nos","quantity":1,"price":7910.0,"section":"Bearing","location":"S1","id":"m60","threshold":2,"code":""},{"name":"Bearing – 6310","unit":"Nos","quantity":1,"price":4950.0,"section":"Bearing","location":"S1","id":"m61","threshold":2,"code":""},{"name":"Bearing – RMS 14","unit":"Nos","quantity":2,"price":0,"section":"Bearing","location":"S1","id":"m62","threshold":2,"code":""},{"name":"Bearing – 22218","unit":"Nos","quantity":1,"price":0,"section":"Bearing","location":"S1","id":"m63","threshold":2,"code":""},{"name":"Bearing – 32216","unit":"Nos","quantity":1,"price":0,"section":"Bearing","location":"S1","id":"m64","threshold":2,"code":""},{"name":"Bearing – NU 2212W","unit":"Nos","quantity":1,"price":33072.84,"section":"Bearing","location":"S1","id":"m65","threshold":2,"code":""},{"name":"Bearing sleeve","unit":"Nos","quantity":1,"price":5900.0,"section":"Bearing","location":"S1","id":"m66","threshold":2,"code":""},{"name":"Bearing – 462 A","unit":"Nos","quantity":1,"price":2300.0,"section":"Bearing","location":"S1","id":"m67","threshold":2,"code":""},{"name":"Bearing – 453 X","unit":"Nos","quantity":1,"price":0,"section":"Bearing","location":"S1","id":"m68","threshold":2,"code":""},{"name":"Oil seal – 55 x 75 x 12","unit":"Nos","quantity":3,"price":450.0,"section":"Oil Seal","location":"","id":"m69","threshold":2,"code":""},{"name":"Oil seal – 45 x 62 x 12","unit":"Nos","quantity":5,"price":450.0,"section":"Oil Seal","location":"","id":"m70","threshold":2,"code":""},{"name":"Oil seal – 30 x 50 x 11","unit":"Nos","quantity":1,"price":0,"section":"Oil Seal","location":"","id":"m71","threshold":2,"code":""},{"name":"Oil seal – 55 x 72 x 12","unit":"Nos","quantity":11,"price":0,"section":"Oil Seal","location":"","id":"m72","threshold":2,"code":""},{"name":"Oil seal – 50 x 75 x 12","unit":"Nos","quantity":1,"price":575.0,"section":"Oil Seal","location":"","id":"m73","threshold":2,"code":""},{"name":"Oil seal – 54 x 75 x 12","unit":"Nos","quantity":1,"price":0,"section":"Oil Seal","location":"","id":"m74","threshold":2,"code":""},{"name":"Oil seal – 85 x 100 x 12","unit":"Nos","quantity":1,"price":1100.0,"section":"Oil Seal","location":"","id":"m75","threshold":2,"code":""},{"name":"Oil seal – 120 x 100 x 13","unit":"Nos","quantity":1,"price":2800.0,"section":"Oil Seal","location":"","id":"m76","threshold":2,"code":""},{"name":"Oil seal – 48 x 70 x 12","unit":"Nos","quantity":8,"price":975.0,"section":"Oil Seal","location":"","id":"m77","threshold":2,"code":""},{"name":"Oil seal – 55 x 80 x 12","unit":"Nos","quantity":4,"price":0,"section":"Oil Seal","location":"","id":"m78","threshold":2,"code":""},{"name":"Oil seal – 60 x 85 x 12","unit":"Nos","quantity":3,"price":1550.0,"section":"Oil Seal","location":"","id":"m79","threshold":2,"code":""},{"name":"Oil seal – 42 x 72 x 10","unit":"Nos","quantity":2,"price":600.0,"section":"Oil Seal","location":"","id":"m80","threshold":2,"code":""},{"name":"Elbow – ½”","unit":"Nos","quantity":17,"price":40.0,"section":"Plumbing Items","location":"","id":"m81","threshold":2,"code":""},{"name":"T socket – ½”","unit":"Nos","quantity":4,"price":40.0,"section":"Plumbing Items","location":"","id":"m82","threshold":2,"code":""},{"name":"Ball valve – ½”","unit":"Nos","quantity":1,"price":400.0,"section":"Plumbing Items","location":"","id":"m83","threshold":2,"code":""},{"name":"Valve socket – ½”","unit":"Nos","quantity":2,"price":40.0,"section":"Plumbing Items","location":"","id":"m84","threshold":2,"code":""},{"name":"Shower bend – ½”","unit":"Nos","quantity":1,"price":140.0,"section":"Plumbing Items","location":"","id":"m85","threshold":2,"code":""},{"name":"Faucet socket – ½”","unit":"Nos","quantity":4,"price":35.0,"section":"Plumbing Items","location":"","id":"m86","threshold":2,"code":""},{"name":"GI clip – ½”","unit":"Nos","quantity":25,"price":14.0,"section":"Plumbing Items","location":"","id":"m87","threshold":2,"code":""},{"name":"Sink tap – ½”","unit":"Nos","quantity":1,"price":750.0,"section":"Plumbing Items","location":"","id":"m88","threshold":2,"code":""},{"name":"Reducer - 1 ½” x 1","unit":"Nos","quantity":1,"price":75.0,"section":"Plumbing Items","location":"","id":"m89","threshold":2,"code":""},{"name":"Magic hose - 1 ¼”","unit":"Nos","quantity":1,"price":200.0,"section":"Plumbing Items","location":"","id":"m90","threshold":2,"code":""},{"name":"Shower - ½”","unit":"Nos","quantity":2,"price":460.0,"section":"Plumbing Items","location":"","id":"m91","threshold":2,"code":""},{"name":"Tap - ½”","unit":"Nos","quantity":2,"price":260.0,"section":"Plumbing Items","location":"","id":"m92","threshold":2,"code":""},{"name":"Waste out - 1 ¼”","unit":"Nos","quantity":1,"price":450.0,"section":"Plumbing Items","location":"","id":"m93","threshold":2,"code":""},{"name":"Ball valve – ¾”","unit":"Nos","quantity":1,"price":524.0,"section":"Plumbing Items","location":"","id":"m94","threshold":2,"code":""},{"name":"Elbow – 2\"","unit":"Nos","quantity":1,"price":300.0,"section":"Plumbing Items","location":"","id":"m95","threshold":2,"code":""},{"name":"Valve socket – 2\"","unit":"Nos","quantity":1,"price":300.0,"section":"Plumbing Items","location":"","id":"m96","threshold":2,"code":""},{"name":"Elbow – ¾”","unit":"Nos","quantity":15,"price":100.0,"section":"Plumbing Items","location":"","id":"m97","threshold":2,"code":""},{"name":"Tee – ¾”","unit":"Nos","quantity":6,"price":140.0,"section":"Plumbing Items","location":"","id":"m98","threshold":2,"code":""},{"name":"Reducer – ¾” x ½”","unit":"Nos","quantity":6,"price":100.0,"section":"Plumbing Items","location":"","id":"m99","threshold":2,"code":""},{"name":"Therat socket – 1 ½”","unit":"Nos","quantity":3,"price":100.0,"section":"Plumbing Items","location":"","id":"m100","threshold":2,"code":""},{"name":"Bend - 2\"","unit":"Nos","quantity":1,"price":550.0,"section":"Plumbing Items","location":"","id":"m101","threshold":2,"code":""},{"name":"Flexible hose ½”","unit":"Nos","quantity":1,"price":100.0,"section":"Plumbing Items","location":"","id":"m102","threshold":2,"code":""},{"name":"2\" - Pipe length (PCV)","unit":"Nos","quantity":1,"price":2400.0,"section":"Plumbing Items","location":"","id":"m103","threshold":2,"code":""},{"name":"Screw 1 1/2\"","unit":"Nos","quantity":30,"price":3.5,"section":"Plumbing Items","location":"","id":"m104","threshold":2,"code":""},{"name":"Rool plug 6mm","unit":"Nos","quantity":30,"price":2.5,"section":"Plumbing Items","location":"","id":"m105","threshold":2,"code":""},{"name":"Hilty Bit No 6","unit":"Nos","quantity":2,"price":440.0,"section":"Plumbing Items","location":"","id":"m106","threshold":2,"code":""},{"name":"Flexible hose 1\"","unit":"Nos","quantity":1,"price":100.0,"section":"Plumbing Items","location":"","id":"m107","threshold":2,"code":""},{"name":"Face Mask","unit":"Nos","quantity":50,"price":13.0,"section":"General use Idems","location":"C1-R1","id":"m108","threshold":2,"code":""},{"name":"Stamping Ink","unit":"Nos","quantity":1,"price":250.0,"section":"General use Idems","location":"C1-R1","id":"m109","threshold":2,"code":""},{"name":"Metal Filler","unit":"Nos","quantity":1,"price":1100.0,"section":"General use Idems","location":"C1-R1","id":"m110","threshold":2,"code":""},{"name":"Betadine Spray","unit":"Nos","quantity":1,"price":0,"section":"General use Idems","location":"C1-R1","id":"m111","threshold":2,"code":""},{"name":"Castolin Eutectic","unit":"Nos","quantity":1,"price":0,"section":"General use Idems","location":"C1-R1","id":"m112","threshold":2,"code":""},{"name":"Hydraulic Fluid (Super 105)","unit":"Nos","quantity":1,"price":0,"section":"General use Idems","location":"C1-R1","id":"m113","threshold":2,"code":""},{"name":"Isopropyl Alcohol","unit":"Nos","quantity":1,"price":237.0,"section":"General use Idems","location":"C1-R1","id":"m114","threshold":2,"code":""},{"name":"Cylinder Head Gasket","unit":"Nos","quantity":1,"price":8500.0,"section":"General use Idems","location":"C1-R1","id":"m115","threshold":2,"code":""},{"name":"Surgical Gauze (5 yard)","unit":"Nos","quantity":2,"price":0,"section":"General use Idems","location":"C1-R2","id":"m116","threshold":2,"code":""},{"name":"Cotton Wool (20g)","unit":"Nos","quantity":2,"price":237.0,"section":"General use Idems","location":"C1-R2","id":"m117","threshold":2,"code":""},{"name":"Betadine Spray","unit":"Nos","quantity":1,"price":0,"section":"General use Idems","location":"C1-R2","id":"m118","threshold":2,"code":""},{"name":"Elastic Adhesive Bandage","unit":"Nos","quantity":1,"price":300.0,"section":"General use Idems","location":"C1-R2","id":"m119","threshold":2,"code":""},{"name":"Surgical Scissors","unit":"Nos","quantity":1,"price":0,"section":"General use Idems","location":"C1-R2","id":"m120","threshold":2,"code":""},{"name":"Ruler","unit":"Nos","quantity":1,"price":150.0,"section":"General use Idems","location":"C1-R2","id":"m121","threshold":2,"code":""},{"name":"Brass Flux- 500g","unit":"Nos","quantity":1,"price":0,"section":"General use Idems","location":"C1-R2","id":"m122","threshold":2,"code":""},{"name":"Bicycle Rear Hub","unit":"Nos","quantity":1,"price":500.0,"section":"General use Idems","location":"C1-R2","id":"m123","threshold":2,"code":""},{"name":"Power steering fluid","unit":"Ltr","quantity":2,"price":2450.0,"section":"General use Idems","location":"C1-R2","id":"m124","threshold":2,"code":""},{"name":"Trimmer Line (3 x 15 mm)","unit":"Nos","quantity":1,"price":500.0,"section":"General use Idems","location":"C1-R2","id":"m125","threshold":2,"code":""},{"name":"Automotive Oil Hose","unit":"Nos","quantity":1,"price":400.0,"section":"General use Idems","location":"C1-R2","id":"m126","threshold":2,"code":""},{"name":"Pocket Notebook","unit":"Nos","quantity":2,"price":45.0,"section":"General use Idems","location":"C1-R2","id":"m127","threshold":2,"code":""},{"name":"Department Acknowledgement Note","unit":"Nos","quantity":12,"price":0,"section":"General use Idems","location":"C1-R2","id":"m128","threshold":2,"code":""},{"name":"Waste Paper Receipt Note","unit":"Nos","quantity":23,"price":864.58,"section":"General use Idems","location":"C1-R3","id":"m129","threshold":2,"code":""},{"name":"Purchase Order","unit":"Nos","quantity":23,"price":1486.67,"section":"General use Idems","location":"C1-R3","id":"m130","threshold":2,"code":""},{"name":"Stoes Requisition - GIN","unit":"Nos","quantity":30,"price":447.91,"section":"General use Idems","location":"C1-R3","id":"m131","threshold":2,"code":""},{"name":"Firewood Receipt Note","unit":"Nos","quantity":8,"price":466.66,"section":"General use Idems","location":"C1-R3","id":"m132","threshold":2,"code":""},{"name":"Purchase Requisition","unit":"Nos","quantity":10,"price":801.67,"section":"General use Idems","location":"C1-R3","id":"m133","threshold":2,"code":""},{"name":"Store Bill Book","unit":"Nos","quantity":22,"price":875.0,"section":"General use Idems","location":"C1-R3","id":"m134","threshold":2,"code":""},{"name":"Good Receipt Note","unit":"Nos","quantity":3,"price":1476.04,"section":"General use Idems","location":"C1-R3","id":"m135","threshold":2,"code":""},{"name":"Transfer & Dispatch note","unit":"Nos","quantity":6,"price":0,"section":"General use Idems","location":"C1-R3","id":"m136","threshold":2,"code":""},{"name":"CR - Book","unit":"Nos","quantity":1,"price":790.0,"section":"General use Idems","location":"C1-R3","id":"m137","threshold":2,"code":""},{"name":"Duster","unit":"Nos","quantity":1,"price":120.0,"section":"General use Idems","location":"C1-R3","id":"m138","threshold":2,"code":""},{"name":"16mm Nuts","unit":"Nos","quantity":146,"price":0,"section":"General use Idems / Bolt & nuts","location":"A1","id":"m139","threshold":2,"code":""},{"name":"10x25 Bolt","unit":"Nos","quantity":25,"price":80.0,"section":"General use Idems / Bolt & nuts","location":"A2","id":"m140","threshold":2,"code":""},{"name":"8x40 Bolt","unit":"Nos","quantity":23,"price":25.0,"section":"General use Idems / Bolt & nuts","location":"A3","id":"m141","threshold":2,"code":""},{"name":"8mm Nut","unit":"Nos","quantity":26,"price":0,"section":"General use Idems / Bolt & nuts","location":"A3","id":"m142","threshold":2,"code":""},{"name":"Washer","unit":"Nos","quantity":100,"price":5.0,"section":"General use Idems / Bolt & nuts","location":"A4","id":"m143","threshold":2,"code":""},{"name":"Washer - 16mm","unit":"Nos","quantity":22,"price":23.0,"section":"General use Idems / Bolt & nuts","location":"A4","id":"m144","threshold":2,"code":""},{"name":"Washer - 10mm","unit":"Nos","quantity":48,"price":20.0,"section":"General use Idems / Bolt & nuts","location":"A4","id":"m145","threshold":2,"code":""},{"name":"Washer - 12mm","unit":"Nos","quantity":118,"price":20.0,"section":"General use Idems / Bolt & nuts","location":"A4","id":"m146","threshold":2,"code":""},{"name":"Washer - 5mm","unit":"Nos","quantity":42,"price":3.0,"section":"General use Idems / Bolt & nuts","location":"A4","id":"m147","threshold":2,"code":""},{"name":"16x35 Bolt nut","unit":"Nos","quantity":24,"price":90.0,"section":"General use Idems / Bolt & nuts","location":"B1","id":"m148","threshold":2,"code":""},{"name":"6x50 Bolt","unit":"Nos","quantity":33,"price":20.0,"section":"General use Idems / Bolt & nuts","location":"B2","id":"m149","threshold":2,"code":""},{"name":"6mm Bolt","unit":"Nos","quantity":29,"price":10.0,"section":"General use Idems / Bolt & nuts","location":"B2","id":"m150","threshold":2,"code":""},{"name":"12x30 Bolt","unit":"Nos","quantity":16,"price":45.0,"section":"General use Idems / Bolt & nuts","location":"B3","id":"m151","threshold":2,"code":""},{"name":"12mm Nut","unit":"Nos","quantity":16,"price":15.0,"section":"General use Idems / Bolt & nuts","location":"B3","id":"m152","threshold":2,"code":""},{"name":"Screw Hook","unit":"Nos","quantity":8,"price":0,"section":"General use Idems / Bolt & nuts","location":"B4","id":"m153","threshold":2,"code":""},{"name":"Roll Plug","unit":"Nos","quantity":6,"price":0,"section":"General use Idems / Bolt & nuts","location":"B4","id":"m154","threshold":2,"code":""},{"name":"10x30 Bolt","unit":"Nos","quantity":49,"price":40.0,"section":"General use Idems / Bolt & nuts","location":"C2","id":"m155","threshold":2,"code":""},{"name":"10mm Nuts","unit":"Nos","quantity":49,"price":15.0,"section":"General use Idems / Bolt & nuts","location":"C2","id":"m156","threshold":2,"code":""},{"name":"8x50 Bolt","unit":"Nos","quantity":16,"price":30.0,"section":"General use Idems / Bolt & nuts","location":"C3","id":"m157","threshold":2,"code":""},{"name":"8mm Nuts","unit":"Nos","quantity":15,"price":10.0,"section":"General use Idems / Bolt & nuts","location":"C3","id":"m158","threshold":2,"code":""},{"name":"Reduce Socket (4\" to 6\")","unit":"Nos","quantity":1,"price":0,"section":"General use Idems / Bolt & nuts","location":"C4","id":"m159","threshold":2,"code":""},{"name":"8x40 Allen Bolt","unit":"Nos","quantity":76,"price":85.0,"section":"General use Idems / Bolt & nuts","location":"D1","id":"m160","threshold":2,"code":""},{"name":"8x35 Allen Bolt","unit":"Nos","quantity":61,"price":80.0,"section":"General use Idems / Bolt & nuts","location":"D2","id":"m161","threshold":2,"code":""},{"name":"10x50 Allen Bolt","unit":"Nos","quantity":39,"price":155.0,"section":"General use Idems / Bolt & nuts","location":"D3","id":"m162","threshold":2,"code":""},{"name":"8x50 Allen Bolt","unit":"Nos","quantity":20,"price":40.0,"section":"General use Idems / Bolt & nuts","location":"D4","id":"m163","threshold":2,"code":""},{"name":"12x75 Allen Bolt","unit":"Nos","quantity":37,"price":72.0,"section":"General use Idems / Bolt & nuts","location":"D5","id":"m164","threshold":2,"code":""},{"name":"10x25 Allen Bolt","unit":"Nos","quantity":45,"price":42.0,"section":"General use Idems / Bolt & nuts","location":"D6","id":"m165","threshold":2,"code":""},{"name":"12x65 Bolt","unit":"Nos","quantity":1,"price":60.0,"section":"General use Idems / Bolt & nuts","location":"E1","id":"m166","threshold":2,"code":""},{"name":"12mm Nut","unit":"Nos","quantity":1,"price":0,"section":"General use Idems / Bolt & nuts","location":"E1","id":"m167","threshold":2,"code":""},{"name":"8x75 Bolt","unit":"Nos","quantity":1,"price":0,"section":"General use Idems / Bolt & nuts","location":"E2","id":"m168","threshold":2,"code":""},{"name":"8mm Nut","unit":"Nos","quantity":10,"price":0,"section":"General use Idems / Bolt & nuts","location":"E2","id":"m169","threshold":2,"code":""},{"name":"14x60 Bolt","unit":"Nos","quantity":12,"price":135.0,"section":"General use Idems / Bolt & nuts","location":"E3","id":"m170","threshold":2,"code":""},{"name":"16x60 Bolt","unit":"Nos","quantity":1,"price":135.0,"section":"General use Idems / Bolt & nuts","location":"E4","id":"m171","threshold":2,"code":""},{"name":"20x100 Bolt","unit":"Nos","quantity":1,"price":400.0,"section":"General use Idems / Bolt & nuts","location":"E5","id":"m172","threshold":2,"code":""},{"name":"12x40 Bolt","unit":"Nos","quantity":1,"price":240.0,"section":"General use Idems / Bolt & nuts","location":"E6","id":"m173","threshold":2,"code":""},{"name":"12x65 Bolt","unit":"Nos","quantity":1,"price":120.0,"section":"General use Idems / Bolt & nuts","location":"E7","id":"m174","threshold":2,"code":""},{"name":"18x60 Bolt","unit":"Nos","quantity":1,"price":285.0,"section":"General use Idems / Bolt & nuts","location":"F1","id":"m175","threshold":2,"code":""},{"name":"18mm Nut","unit":"Nos","quantity":2,"price":0,"section":"General use Idems / Bolt & nuts","location":"F1","id":"m176","threshold":2,"code":""},{"name":"16x30 Bolt","unit":"Nos","quantity":14,"price":200.0,"section":"General use Idems / Bolt & nuts","location":"F2","id":"m177","threshold":2,"code":""},{"name":"20x50 Bolt","unit":"Nos","quantity":31,"price":250.0,"section":"General use Idems / Bolt & nuts","location":"F3","id":"m178","threshold":2,"code":""},{"name":"20mm Nut","unit":"Nos","quantity":15,"price":0,"section":"General use Idems / Bolt & nuts","location":"F3","id":"m179","threshold":2,"code":""},{"name":"12x100 mm Bolt","unit":"Nos","quantity":1,"price":75.0,"section":"General use Idems / Bolt & nuts","location":"F4","id":"m180","threshold":2,"code":""},{"name":"20x75 Bolt","unit":"Nos","quantity":1,"price":345.0,"section":"General use Idems / Bolt & nuts","location":"F5","id":"m181","threshold":2,"code":""},{"name":"20mm Nut","unit":"Nos","quantity":1,"price":0,"section":"General use Idems / Bolt & nuts","location":"F5","id":"m182","threshold":2,"code":""},{"name":"GI Screw Bolt (3\")","unit":"Nos","quantity":21,"price":0,"section":"General use Idems / Bolt & nuts","location":"F7","id":"m183","threshold":2,"code":""},{"name":"6 No Roll Plug","unit":"Nos","quantity":13,"price":2.0,"section":"General use Idems / Bolt & nuts","location":"F7","id":"m184","threshold":2,"code":""},{"name":"8x20 A Bolt","unit":"Nos","quantity":22,"price":60.0,"section":"General use Idems / Bolt & nuts","location":"G1","id":"m185","threshold":2,"code":""},{"name":"Bolt 6 x 100","unit":"Nos","quantity":10,"price":25.0,"section":"General use Idems / Bolt & nuts","location":"H7","id":"m186","threshold":2,"code":""},{"name":"Bolt - 8 x 40","unit":"Nos","quantity":51,"price":15.0,"section":"General use Idems / Bolt & nuts","location":"H8","id":"m187","threshold":2,"code":""},{"name":"Nut - 8 x 40","unit":"Nos","quantity":50,"price":15.0,"section":"General use Idems / Bolt & nuts","location":"","id":"m188","threshold":2,"code":""},{"name":"8x75 A Bolt","unit":"Nos","quantity":1,"price":50.0,"section":"General use Idems / Bolt & nuts","location":"G3","id":"m189","threshold":2,"code":""},{"name":"10x40 Nut","unit":"Nos","quantity":6,"price":25.0,"section":"General use Idems / Bolt & nuts","location":"G4","id":"m190","threshold":2,"code":""},{"name":"8x25 A Bolt","unit":"Nos","quantity":1,"price":40.0,"section":"General use Idems / Bolt & nuts","location":"G5","id":"m191","threshold":2,"code":""},{"name":"8x15 A Bolt","unit":"Nos","quantity":1,"price":60.0,"section":"General use Idems / Bolt & nuts","location":"G6","id":"m192","threshold":2,"code":""},{"name":"Anchor Hook Bolt","unit":"Nos","quantity":1,"price":0,"section":"General use Idems / Bolt & nuts","location":"G7","id":"m193","threshold":2,"code":""},{"name":"15 x 40 Bolt & nuts","unit":"Nos","quantity":1,"price":60.0,"section":"General use Idems / Bolt & nuts","location":"H1","id":"m194","threshold":2,"code":""},{"name":"20 x 200 Bolt & nuts","unit":"Nos","quantity":1,"price":1225.0,"section":"General use Idems / Bolt & nuts","location":"H2","id":"m195","threshold":2,"code":""},{"name":"16x30 Bolt","unit":"Nos","quantity":1,"price":0,"section":"General use Idems / Bolt & nuts","location":"H3","id":"m196","threshold":2,"code":""},{"name":"10 x 20 Bolt","unit":"Nos","quantity":1,"price":0,"section":"General use Idems / Bolt & nuts","location":"H4","id":"m197","threshold":2,"code":""},{"name":"8 x35 Bolt & nuts","unit":"Nos","quantity":1,"price":0,"section":"General use Idems / Bolt & nuts","location":"H6","id":"m198","threshold":2,"code":""},{"name":"Grinding Disc (4 1/2\")","unit":"Nos","quantity":96,"price":390.0,"section":"Workshop Tools & Supplies","location":"C2-R1","id":"m199","threshold":2,"code":""},{"name":"Grinding Disc (7\")","unit":"Nos","quantity":1,"price":1250.0,"section":"Workshop Tools & Supplies","location":"C2-R1","id":"m200","threshold":2,"code":""},{"name":"Power Steering Fluid","unit":"Ltr","quantity":2,"price":2450.0,"section":"Workshop Tools & Supplies","location":"C2-R1","id":"m201","threshold":2,"code":""},{"name":"Battery Water","unit":"Nos","quantity":3,"price":180.0,"section":"Workshop Tools & Supplies","location":"C2-R1","id":"m202","threshold":2,"code":""},{"name":"Pressure Gauge","unit":"Nos","quantity":2,"price":350.0,"section":"Workshop Tools & Supplies","location":"C2-R1","id":"m203","threshold":2,"code":""},{"name":"Chain Saw Chain 22\"","unit":"Nos","quantity":1,"price":4200.0,"section":"Workshop Tools & Supplies","location":"C2-R1","id":"m204","threshold":2,"code":""},{"name":"File","unit":"Nos","quantity":3,"price":400.0,"section":"Workshop Tools & Supplies","location":"C2-R1","id":"m205","threshold":2,"code":""},{"name":"Steel Ruler","unit":"Nos","quantity":1,"price":150.0,"section":"Workshop Tools & Supplies","location":"C2-R1","id":"m206","threshold":2,"code":""},{"name":"View Glass","unit":"Nos","quantity":1,"price":10030.0,"section":"Workshop Tools & Supplies","location":"C2-R2","id":"m207","threshold":2,"code":""},{"name":"Drill Bit","unit":"Nos","quantity":2,"price":600.0,"section":"Workshop Tools & Supplies","location":"C2-R2","id":"m208","threshold":2,"code":""},{"name":"Thread Seal 1\"","unit":"Nos","quantity":3,"price":150.0,"section":"Workshop Tools & Supplies","location":"C2-R2","id":"m209","threshold":2,"code":""},{"name":"Hacksaw Blade (1\")","unit":"Nos","quantity":2,"price":250.0,"section":"Workshop Tools & Supplies","location":"C2-R2","id":"m210","threshold":2,"code":""},{"name":"Welding Electrodes","unit":"Kg","quantity":7,"price":375.0,"section":"Workshop Tools & Supplies","location":"C2-R2","id":"m211","threshold":2,"code":""},{"name":"Hacksaw Blades","unit":"Nos","quantity":8,"price":250.0,"section":"Workshop Tools & Supplies","location":"C2-R2","id":"m212","threshold":2,"code":""},{"name":"Chain saw packing set","unit":"Nos","quantity":1,"price":350.0,"section":"Workshop Tools & Supplies","location":"C2-R2","id":"m213","threshold":2,"code":""},{"name":"Glass cutter","unit":"Nos","quantity":2,"price":500.0,"section":"Workshop Tools & Supplies","location":"C2-R2","id":"m214","threshold":2,"code":""},{"name":"Flap Disc","unit":"Nos","quantity":5,"price":1250.0,"section":"Workshop Tools & Supplies","location":"C2-R2","id":"m215","threshold":2,"code":""},{"name":"Spark plug","unit":"Nos","quantity":2,"price":450.0,"section":"Workshop Tools & Supplies","location":"C2-R2","id":"m216","threshold":2,"code":""},{"name":"Ekel Broom","unit":"Nos","quantity":5,"price":370.0,"section":"House Keeping Items","location":"Stores","id":"m217","threshold":2,"code":""},{"name":"Plastic Broom","unit":"Nos","quantity":2,"price":350.0,"section":"House Keeping Items","location":"Stores","id":"m218","threshold":2,"code":""},{"name":"Flat Panel TV wall Mount","unit":"Nos","quantity":1,"price":2500.0,"section":"Broom","location":"Stores","id":"m219","threshold":2,"code":""},{"name":"Fire cylinder","unit":"Nos","quantity":9,"price":0,"section":"Broom","location":"","id":"m220","threshold":2,"code":""},{"name":"Fandom wheel","unit":"Nos","quantity":4,"price":5500.0,"section":"Broom","location":"","id":"m221","threshold":2,"code":""},{"name":"Nylon rope 16mm","unit":"Roll","quantity":1,"price":13000.0,"section":"Shovel","location":"Stores","id":"m222","threshold":2,"code":""},{"name":"LED ceiling bulb 18w","unit":"Nos","quantity":3,"price":1700.0,"section":"Rack 02 - Electrical & Items","location":"Rack 2","id":"m223","threshold":2,"code":""},{"name":"Over load","unit":"Nos","quantity":6,"price":0,"section":"Rack 02 - Electrical & Items","location":"Rack 2","id":"m224","threshold":2,"code":""},{"name":"ABC box","unit":"Nos","quantity":1,"price":1280.0,"section":"Rack 02 - Electrical & Items","location":"Rack 2","id":"m225","threshold":2,"code":""},{"name":"Switch","unit":"Nos","quantity":2,"price":0,"section":"Rack 02 - Electrical & Items","location":"Rack 2","id":"m226","threshold":2,"code":""},{"name":"Ceiling rods","unit":"Nos","quantity":8,"price":0,"section":"Rack 02 - Electrical & Items","location":"Rack 2","id":"m227","threshold":2,"code":""},{"name":"Over load 63-80","unit":"Nos","quantity":1,"price":5500.0,"section":"Rack 02 - Electrical & Items","location":"Rack 2","id":"m228","threshold":2,"code":""},{"name":"Sunk box 4 in 1","unit":"Nos","quantity":6,"price":360.0,"section":"Rack 02 - Electrical & Items","location":"Rack 2","id":"m229","threshold":2,"code":""},{"name":"Thermometer 0-350","unit":"Nos","quantity":1,"price":8450.0,"section":"Rack 02 - Electrical & Items","location":"Rack 2","id":"m230","threshold":2,"code":""},{"name":"Gas welding rod","unit":"Kg","quantity":1,"price":0,"section":"Rack 02 - Electrical & Items","location":"Rack 2","id":"m231","threshold":2,"code":""},{"name":"Casing 1/2\"","unit":"Nos","quantity":2,"price":250.0,"section":"Rack 02 - Electrical & Items","location":"Rack 2","id":"m232","threshold":2,"code":""},{"name":"Copper rod - 14mm","unit":"Nos","quantity":1,"price":0,"section":"Rack 02 - Electrical & Items","location":"Rack 2","id":"m233","threshold":2,"code":""},{"name":"Copper rod - 8mm","unit":"Nos","quantity":1,"price":0,"section":"Rack 02 - Electrical & Items","location":"Rack 2","id":"m234","threshold":2,"code":""},{"name":"Cable tie 300 x 4.8mm","unit":"Pkt","quantity":1,"price":1150.0,"section":"Rack 02 - Electrical & Items","location":"Rack 2","id":"m235","threshold":2,"code":""},{"name":"Cable tie 450 x 7.6mm","unit":"Pkt","quantity":1,"price":1250.0,"section":"Rack 02 - Electrical & Items","location":"Rack 2","id":"m236","threshold":2,"code":""},{"name":"Glass Gum Tape","unit":"Nos","quantity":52,"price":430.0,"section":"Rack 02 - Electrical & Items","location":"Rack 2","id":"m237","threshold":2,"code":""},{"name":"Oring 1.5mm","unit":"Nos","quantity":30,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m238","threshold":2,"code":""},{"name":"Oring 1.7mm","unit":"Nos","quantity":22,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m239","threshold":2,"code":""},{"name":"Oring 110mm","unit":"Nos","quantity":14,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m240","threshold":2,"code":""},{"name":"Oring 24x30x03mm","unit":"Nos","quantity":6,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m241","threshold":2,"code":""},{"name":"Oring 3.7mm","unit":"Nos","quantity":6,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m242","threshold":2,"code":""},{"name":"Oring 34x44x05mm","unit":"Nos","quantity":10,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m243","threshold":2,"code":""},{"name":"Oring 3mm(4mm)","unit":"Nos","quantity":19,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m244","threshold":2,"code":""},{"name":"Oring 4.5mm","unit":"Nos","quantity":2,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m245","threshold":2,"code":""},{"name":"Oring 45x40x3.5mm","unit":"Nos","quantity":1,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m246","threshold":2,"code":""},{"name":"Oring 50x40x05mm","unit":"Nos","quantity":25,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m247","threshold":2,"code":""},{"name":"Nylon rope roll","unit":"Nos","quantity":100,"price":145.0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m248","threshold":2,"code":""},{"name":"1/4 Rubber sheet","unit":"Nos","quantity":6,"price":3315.0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m249","threshold":2,"code":""},{"name":"Hose clip 6\"","unit":"Nos","quantity":6,"price":400.0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m250","threshold":2,"code":""},{"name":"Hose clip 8\"","unit":"Nos","quantity":2,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m251","threshold":2,"code":""},{"name":"Hose clip 5\"","unit":"Nos","quantity":1,"price":120.0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m252","threshold":2,"code":""},{"name":"Hose clip 2 1/2\"","unit":"Nos","quantity":1,"price":80.0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m253","threshold":2,"code":""},{"name":"Hose clip 4\"","unit":"Nos","quantity":1,"price":120.0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m254","threshold":2,"code":""},{"name":"Carbon coupling 7\"","unit":"Nos","quantity":1,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m255","threshold":2,"code":""},{"name":"Rotated driveline","unit":"Nos","quantity":1,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m256","threshold":2,"code":""},{"name":"Safety helmet","unit":"Nos","quantity":4,"price":2500.0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m257","threshold":2,"code":""},{"name":"Welding helmet","unit":"Nos","quantity":1,"price":575.0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m258","threshold":2,"code":""},{"name":"Tool box","unit":"Nos","quantity":3,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m259","threshold":2,"code":""},{"name":"Weight balance 10 kg","unit":"Nos","quantity":1,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m260","threshold":2,"code":""},{"name":"A 42 belt","unit":"Nos","quantity":1,"price":840.0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m261","threshold":2,"code":""},{"name":"Carburetor","unit":"Nos","quantity":2,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m262","threshold":2,"code":""},{"name":"Rubber packing 2\"","unit":"Nos","quantity":2,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m263","threshold":2,"code":""},{"name":"Driller","unit":"No","quantity":1,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m264","threshold":2,"code":""},{"name":"Bicycle equipment set","unit":"No","quantity":1,"price":900.0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m265","threshold":2,"code":""},{"name":"Concrete cutting disc 10\"","unit":"Nos","quantity":2,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m266","threshold":2,"code":""},{"name":"Cutting disc 14\"","unit":"Nos","quantity":4,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m267","threshold":2,"code":""},{"name":"Sand paper / grinding paper","unit":"Nos","quantity":6,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m268","threshold":2,"code":""},{"name":"Cutting disc 4 1/2","unit":"Nos","quantity":27,"price":150.0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m269","threshold":2,"code":""},{"name":"Gland packing - 12mm","unit":"Kg","quantity":10,"price":3980.0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m270","threshold":2,"code":""},{"name":"Gland packing - 16mm","unit":"Kg","quantity":10,"price":3980.0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m271","threshold":2,"code":""},{"name":"Air bellows","unit":"Nos","quantity":23,"price":0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m272","threshold":2,"code":""},{"name":"Concrete cutting disc 4 1/2\"","unit":"Nos","quantity":1,"price":1200.0,"section":"Rack 03 & General Inventory","location":"Rack 3","id":"m273","threshold":2,"code":""},{"name":"Rosin","unit":"Kg","quantity":75,"price":425.0,"section":"Raw Materials & Heavy Inventory","location":"Mini Store","id":"m274","threshold":2,"code":""},{"name":"C.M.C","unit":"Kg","quantity":10,"price":2000.0,"section":"Raw Materials & Heavy Inventory","location":"Mini Store","id":"m275","threshold":2,"code":""},{"name":"Caustic Soda Flakes Bags:","unit":"Kg","quantity":25,"price":350.0,"section":"Raw Materials & Heavy Inventory","location":"Store","id":"m276","threshold":2,"code":""},{"name":"Alum Bag:","unit":"Kg","quantity":250,"price":130.0,"section":"Raw Materials & Heavy Inventory","location":"Store","id":"m277","threshold":2,"code":""},{"name":"Fire clay","unit":"Kg","quantity":100,"price":50.0,"section":"Raw Materials & Heavy Inventory","location":"Store","id":"m278","threshold":2,"code":""},{"name":"Aluminium sulphate","unit":"Kg","quantity":250,"price":130.0,"section":"Raw Materials & Heavy Inventory","location":"Store","id":"m279","threshold":2,"code":""},{"name":"Putty 20Kg  - Skim coat","unit":"Nos","quantity":1,"price":1050.0,"section":"Raw Materials & Heavy Inventory","location":"Mini Store","id":"m280","threshold":2,"code":""},{"name":"Cement bag - 50kg","unit":"Ltr","quantity":2,"price":2050.0,"section":"Raw Materials & Heavy Inventory","location":"","id":"m281","threshold":2,"code":""},{"name":"Cement grout - 5Kg","unit":"Nos","quantity":3,"price":300.0,"section":"Raw Materials & Heavy Inventory","location":"Mini Store","id":"m282","threshold":2,"code":""},{"name":"A-80 Belt","unit":"Nos","quantity":1,"price":5275.0,"section":"Belts","location":"S2 - D3 - B","id":"m283","threshold":2,"code":""},{"name":"C-85 Belt","unit":"Nos","quantity":6,"price":3900.0,"section":"Belts","location":"S2 - Wall","id":"m284","threshold":2,"code":""},{"name":"B-98 Belt","unit":"Nos","quantity":2,"price":2450.0,"section":"Belts","location":"S2 - D3 - B","id":"m285","threshold":2,"code":""},{"name":"A-98 Belt","unit":"Nos","quantity":2,"price":1300.0,"section":"Belts","location":"S2 - D3 - B","id":"m286","threshold":2,"code":""},{"name":"B-90 Belt","unit":"Nos","quantity":3,"price":1850.0,"section":"Belts","location":"S2 - D2 - B","id":"m287","threshold":2,"code":""},{"name":"C-138 Belt","unit":"Nos","quantity":2,"price":4130.0,"section":"Belts","location":"S2 - D2 - B","id":"m288","threshold":2,"code":""},{"name":"174 V Belt","unit":"Nos","quantity":1,"price":1290.0,"section":"Belts","location":"S2 - D2 - B","id":"m289","threshold":2,"code":""},{"name":"B-85 Belt","unit":"Nos","quantity":2,"price":2100.0,"section":"Belts","location":"S2 - Wall","id":"m290","threshold":2,"code":""},{"name":"B-100","unit":"Nos","quantity":2,"price":4600.0,"section":"Belts","location":"S2 - Wall","id":"m291","threshold":2,"code":""},{"name":"B-94","unit":"Nos","quantity":1,"price":1940.0,"section":"Belts","location":"S2 - Wall","id":"m292","threshold":2,"code":""},{"name":"Spring 1/2\"","unit":"Nos","quantity":16,"price":164.2,"section":"Rack 01 - Mechanical & Hardware","location":"Rack 1","id":"m293","threshold":2,"code":""},{"name":"Boiler cleaning brush","unit":"Nos","quantity":8,"price":1000.0,"section":"Rack 01 - Mechanical & Hardware","location":"Rack 1","id":"m294","threshold":2,"code":""},{"name":"Tower bolt","unit":"Nos","quantity":2,"price":200.0,"section":"Rack 01 - Mechanical & Hardware","location":"Rack 1","id":"m295","threshold":2,"code":""},{"name":"A-31 belt","unit":"Nos","quantity":4,"price":620.0,"section":"Rack 01 - Mechanical & Hardware","location":"Rack 1","id":"m296","threshold":2,"code":""},{"name":"A-17 belt","unit":"Nos","quantity":1,"price":350.0,"section":"Rack 01 - Mechanical & Hardware","location":"Rack 1","id":"m297","threshold":2,"code":""},{"name":"Coupling bush small","unit":"Nos","quantity":2,"price":375.0,"section":"Rack 01 - Mechanical & Hardware","location":"Rack 1","id":"m298","threshold":2,"code":""},{"name":"M seal 60g","unit":"Nos","quantity":1,"price":350.0,"section":"Rack 01 - Mechanical & Hardware","location":"Rack 1","id":"m299","threshold":2,"code":""},{"name":"Chain saw air filter","unit":"Nos","quantity":1,"price":480.0,"section":"Rack 01 - Mechanical & Hardware","location":"Rack 1","id":"m300","threshold":2,"code":""},{"name":"Lighter for welding","unit":"Nos","quantity":2,"price":1990.0,"section":"Rack 01 - Mechanical & Hardware","location":"Rack 1","id":"m301","threshold":2,"code":""},{"name":"Air duster gun","unit":"Nos","quantity":1,"price":750.0,"section":"Rack 01 - Mechanical & Hardware","location":"Rack 1","id":"m302","threshold":2,"code":""},{"name":"Union 1 1/2","unit":"Nos","quantity":1,"price":2350.0,"section":"Rack 01 - Mechanical & Hardware","location":"Rack 1","id":"m303","threshold":2,"code":""},{"name":"1/2\" Ball valve - PVC","unit":"Nos","quantity":2,"price":375.0,"section":"Rack 01 - Mechanical & Hardware","location":"Rack 1","id":"m304","threshold":2,"code":""},{"name":"B - 80 belt","unit":"Nos","quantity":1,"price":1660.0,"section":"Rack 01 - Mechanical & Hardware","location":"Rack 1","id":"m305","threshold":2,"code":""},{"name":"Plastic Funel","unit":"Nos","quantity":1,"price":400.0,"section":"Rack 01 - Mechanical & Hardware","location":"Rack 1","id":"m306","threshold":2,"code":""},{"name":"Weather guard paint – Spruce ( Dark green)","unit":"Ltr","quantity":40,"price":1300.0,"section":"Painting & Brush Items & Tape Rack 2","location":"","id":"m307","threshold":2,"code":""},{"name":"Wira – Blue paint","unit":"Ltr","quantity":1,"price":1700.0,"section":"Painting & Brush Items & Tape Rack 2","location":"","id":"m308","threshold":2,"code":""},{"name":"Enamel bright – Blue","unit":"Ltr","quantity":1,"price":1800.0,"section":"Painting & Brush Items & Tape Rack 2","location":"","id":"m309","threshold":2,"code":""},{"name":"Floor paint bright  - Red","unit":"Ltr","quantity":1,"price":1600.0,"section":"Painting & Brush Items & Tape Rack 2","location":"","id":"m310","threshold":2,"code":""},{"name":"Brilliant white paint","unit":"Ltr","quantity":32,"price":1950.0,"section":"Painting & Brush Items & Tape Rack 2","location":"","id":"m311","threshold":2,"code":""},{"name":"Metal oil paint – Black","unit":"Ltr","quantity":1,"price":1800.0,"section":"Painting & Brush Items & Tape Rack 2","location":"","id":"m312","threshold":2,"code":""},{"name":"Enamel paint – King coconut ( Orange )","unit":"Ltr","quantity":2,"price":1700.0,"section":"Painting & Brush Items & Tape Rack 2","location":"","id":"m313","threshold":2,"code":""},{"name":"Enamel  – Green","unit":"Ltr","quantity":1,"price":1950.0,"section":"Painting & Brush Items & Tape Rack 2","location":"","id":"m314","threshold":2,"code":""},{"name":"Enamel  – Yellow","unit":"Ltr","quantity":1,"price":2200.0,"section":"Painting & Brush Items & Tape Rack 2","location":"","id":"m315","threshold":2,"code":""},{"name":"Enamel  – White","unit":"Ltr","quantity":1,"price":2200.0,"section":"Painting & Brush Items & Tape Rack 2","location":"","id":"m316","threshold":2,"code":""},{"name":"Brilliant white interior paint","unit":"Ltr","quantity":28,"price":1537.5,"section":"Painting & Brush Items & Tape Rack 2","location":"","id":"m317","threshold":2,"code":""},{"name":"Enamel  – White","unit":"Ltr","quantity":3,"price":1800.0,"section":"Painting & Brush Items & Tape Rack 2","location":"","id":"m318","threshold":2,"code":""},{"name":"Strapping Tape","unit":"Roll","quantity":14,"price":5800.0,"section":"Painting & Brush Items & Tape Rack 2","location":"","id":"m319","threshold":2,"code":""},{"name":"Roller bush small","unit":"Nos","quantity":1,"price":500.0,"section":"Painting & Brush Items & Tape Rack 2","location":"","id":"m320","threshold":2,"code":""},{"name":"Royal wax polish - 800g","unit":"Nos","quantity":2,"price":1250.0,"section":"Painting & Brush Items & Tape Rack 2","location":"","id":"m321","threshold":2,"code":""},{"name":"Sunflower seed pack","unit":"Nos","quantity":1,"price":1300.0,"section":"Plantation & Equipment's","location":"","id":"m322","threshold":2,"code":""},{"name":"Cossmoss seed pack","unit":"Nos","quantity":1,"price":1600.0,"section":"Plantation & Equipment's","location":"","id":"m323","threshold":2,"code":""},{"name":"Celosia seeds pack","unit":"Nos","quantity":1,"price":1380.0,"section":"Plantation & Equipment's","location":"","id":"m324","threshold":2,"code":""},{"name":"Farm sickle cutter knife","unit":"Nos","quantity":1,"price":1950.0,"section":"Plantation & Equipment's","location":"","id":"m325","threshold":2,"code":""},{"name":"Pen - Blue","unit":"Nos","quantity":143,"price":23.0,"section":"Stores & Inventory","location":"","id":"m326","threshold":2,"code":""},{"name":"Pen - Red","unit":"Nos","quantity":57,"price":23.0,"section":"Stores & Inventory","location":"","id":"m327","threshold":2,"code":""},{"name":"Pen - Black","unit":"Nos","quantity":21,"price":23.0,"section":"Stores & Inventory","location":"","id":"m328","threshold":2,"code":""},{"name":"Pencil","unit":"Nos","quantity":4,"price":0,"section":"Stores & Inventory","location":"","id":"m329","threshold":2,"code":""},{"name":"White Board maker-Blue","unit":"Nos","quantity":3,"price":150.0,"section":"Stores & Inventory","location":"","id":"m330","threshold":2,"code":""},{"name":"Permanent marker-Black","unit":"Nos","quantity":3,"price":130.0,"section":"Stores & Inventory","location":"","id":"m331","threshold":2,"code":""},{"name":"Permanent markerBlue","unit":"Nos","quantity":3,"price":130.0,"section":"Stores & Inventory","location":"","id":"m332","threshold":2,"code":""},{"name":"Sticky note","unit":"Nos","quantity":2,"price":0,"section":"Stores & Inventory","location":"","id":"m333","threshold":2,"code":""},{"name":"Stapler","unit":"Nos","quantity":3,"price":0,"section":"Stores & Inventory","location":"","id":"m334","threshold":2,"code":""},{"name":"Stapler pin box","unit":"Nos","quantity":6,"price":0,"section":"Stores & Inventory","location":"","id":"m335","threshold":2,"code":""},{"name":"Highlighter pen","unit":"Nos","quantity":6,"price":0,"section":"Stores & Inventory","location":"","id":"m336","threshold":2,"code":""},{"name":"Correction pen","unit":"Nos","quantity":4,"price":0,"section":"Stores & Inventory","location":"","id":"m337","threshold":2,"code":""},{"name":"Scissors","unit":"Nos","quantity":2,"price":1150.0,"section":"Stores & Inventory","location":"","id":"m338","threshold":2,"code":""},{"name":"Binder Clips","unit":"Nos","quantity":10,"price":50.0,"section":"Stores & Inventory","location":"","id":"m339","threshold":2,"code":""},{"name":"2T Oil","unit":"Ltr","quantity":64,"price":1250.0,"section":"Fuel & Oil","location":"","id":"m340","threshold":2,"code":""},{"name":"Black oil","unit":"Ltr","quantity":20,"price":150.0,"section":"Fuel & Oil","location":"","id":"m341","threshold":2,"code":""},{"name":"D.S. 40 Oil","unit":"Ltr","quantity":90,"price":1090.0,"section":"Fuel & Oil","location":"","id":"m342","threshold":2,"code":""},{"name":"Diesel","unit":"Ltr","quantity":188,"price":382.0,"section":"Fuel & Oil","location":"","id":"m343","threshold":2,"code":""},{"name":"H.D. 150 Oil","unit":"Ltr","quantity":255.5,"price":1853.29,"section":"Fuel & Oil","location":"","id":"m344","threshold":2,"code":""},{"name":"H.D. 46 oil","unit":"Ltr","quantity":304,"price":1946.19,"section":"Fuel & Oil","location":"","id":"m345","threshold":2,"code":""},{"name":"Kerosene Oil","unit":"Ltr","quantity":30,"price":195.0,"section":"Fuel & Oil","location":"","id":"m346","threshold":2,"code":""},{"name":"Petrol","unit":"Ltr","quantity":50,"price":317.0,"section":"Fuel & Oil","location":"","id":"m347","threshold":2,"code":""},{"name":"Busbar connector","unit":"Nos","quantity":8,"price":555.0,"section":"Stores","location":"","id":"m348","threshold":2,"code":""},{"name":"Diaphragm","unit":"Nos","quantity":20,"price":500.0,"section":"Stores","location":"","id":"m349","threshold":2,"code":""},{"name":"VFD Pannel","unit":"Nos","quantity":1,"price":739860.0,"section":"Stores","location":"","id":"m350","threshold":2,"code":""},{"name":"Rotating crane cable 8m x 25mm","unit":"Nos","quantity":25,"price":350.0,"section":"Stores","location":"","id":"m351","threshold":2,"code":""},{"name":"Carbon brush","unit":"Nos","quantity":50,"price":1950.0,"section":"Stores","location":"","id":"m352","threshold":2,"code":""},{"name":"Dipharagm","unit":"Nos","quantity":20,"price":500.0,"section":"Stores","location":"","id":"m353","threshold":2,"code":""},{"name":"Safety Helmelt","unit":"Nos","quantity":11,"price":2500.0,"section":"Stores","location":"","id":"m354","threshold":2,"code":""}]</script>
+<script>
+let products = [];
+let editingId = null;
+const EDIT_PASSWORD_HASH = '8b3d9bca7c134a9190277204379941460eb33c39868309401f02fa8e0391d4a7';
+// ^ this is a SHA-256 hash of the password, NOT the password itself (so it can't be read in view-source).
+// Default password is: store123
+// To set your own password: ask Claude to generate the SHA-256 hash for your new password and paste it above.
+let isEditor = false;
+let searchTerm = '';
+let sectionFilter = '';
+let currentPage = 1;
+const PAGE_SIZE = 100;
+
+function uid(){ return 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+async function loadProducts(){
+  let loaded = null;
+  try{
+    const raw = localStorage.getItem('mini_products');
+    loaded = raw ? JSON.parse(raw) : null;
+  }catch(e){ loaded = null; }
+  if(!loaded || loaded.length === 0){
+    const seedEl = document.getElementById('seedData');
+    products = JSON.parse(seedEl.textContent);
+    await saveProducts();
+  } else {
+    products = loaded;
+  }
+  isEditor = localStorage.getItem('mini_editor_auth') === 'true';
+  updateAuthUI();
+  render();
+}
+
+async function saveProducts(){
+  try{
+    localStorage.setItem('mini_products', JSON.stringify(products));
+  }catch(e){
+    console.error('Save failed', e);
+    alert('Save panna mudiyala. Konjam neram kalichu try pannunga.');
+  }
+}
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(products, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mini_store_inventory_backup.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importData(event){
+  if(!requireEditor()) { event.target.value=''; return; }
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async function(e){
+    try{
+      const imported = JSON.parse(e.target.result);
+      if(!Array.isArray(imported)) throw new Error('Invalid format');
+      if(!confirm(`${imported.length} items import pannalama? Ippo irukkira data replace aagum.`)) return;
+      products = imported;
+      await saveProducts();
+      render();
+      alert('Import success!');
+    }catch(err){
+      alert('Import fail aachu. File format check pannunga.');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function stockClass(p){
+  if(p.quantity <= 0) return 'out';
+  if(p.quantity <= (p.threshold || 0)) return 'low';
+  return 'ok';
+}
+function money(n){ return 'Rs. ' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function stockText(p){
+  const c = stockClass(p);
+  if(c==='out') return 'Out';
+  if(c==='low') return 'Low';
+  return 'OK';
+}
+
+function getFiltered(){
+  const term = searchTerm.trim().toLowerCase();
+  return products.filter(p=>{
+    const matchSearch = !term || p.name.toLowerCase().includes(term) || (p.code||'').toLowerCase().includes(term) || (p.location||'').toLowerCase().includes(term);
+    const matchSection = !sectionFilter || p.section === sectionFilter;
+    return matchSearch && matchSection;
+  });
+}
+
+function updateAuthUI(){
+  const tag = document.getElementById('authTag');
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const addBtn = document.getElementById('addBtn');
+  const importBtn = document.getElementById('importBtn');
+  if(isEditor){
+    tag.textContent = 'Editor mode';
+    tag.classList.remove('view'); tag.classList.add('edit');
+    loginBtn.style.display = 'none';
+    logoutBtn.style.display = '';
+    addBtn.style.display = '';
+    importBtn.style.display = '';
+  } else {
+    tag.textContent = 'Viewing only';
+    tag.classList.remove('edit'); tag.classList.add('view');
+    loginBtn.style.display = '';
+    logoutBtn.style.display = 'none';
+    addBtn.style.display = 'none';
+    importBtn.style.display = 'none';
+  }
+}
+
+function openLogin(){
+  document.getElementById('f_password').value = '';
+  document.getElementById('err_password').classList.remove('show');
+  document.getElementById('loginOverlay').classList.add('show');
+}
+function closeLogin(){ document.getElementById('loginOverlay').classList.remove('show'); }
+async function sha256Hex(text){
+  const enc = new TextEncoder().encode(text);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function tryLogin(){
+  const pw = document.getElementById('f_password').value;
+  const hash = await sha256Hex(pw);
+  if(hash === EDIT_PASSWORD_HASH){
+    isEditor = true;
+    localStorage.setItem('mini_editor_auth', 'true');
+    closeLogin();
+    updateAuthUI();
+    render();
+  } else {
+    document.getElementById('err_password').classList.add('show');
+  }
+}
+function logout(){
+  isEditor = false;
+  localStorage.removeItem('mini_editor_auth');
+  updateAuthUI();
+  render();
+}
+function requireEditor(){
+  if(!isEditor){ openLogin(); return false; }
+  return true;
+}
+
+function render(){
+  const total = products.length;
+  const low = products.filter(p => p.quantity > 0 && p.quantity <= (p.threshold||0)).length;
+  const out = products.filter(p => p.quantity <= 0).length;
+  document.getElementById('statTotal').textContent = total.toLocaleString('en-IN');
+  document.getElementById('statLow').textContent = low.toLocaleString('en-IN');
+  document.getElementById('statOut').textContent = out.toLocaleString('en-IN');
+  document.getElementById('subtitle').textContent = total.toLocaleString('en-IN') + ' items across ' + new Set(products.map(p=>p.section)).size + ' sections';
+
+  const lowItems = products.filter(p => p.quantity > 0 && p.quantity <= (p.threshold||0));
+  const banner = document.getElementById('lowBanner');
+  if(lowItems.length > 0){
+    banner.classList.add('show');
+    banner.innerHTML = '<b>' + lowItems.length.toLocaleString('en-IN') + ' item' + (lowItems.length!==1?'s':'') + ' running low.</b> Use search or the section filter to find and restock them.';
+  } else {
+    banner.classList.remove('show');
+  }
+
+  const sections = [...new Set(products.map(p=>p.section).filter(Boolean))].sort();
+  const secSel = document.getElementById('sectionFilter');
+  const curVal = secSel.value;
+  secSel.innerHTML = '<option value="">All sections</option>' + sections.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+  secSel.value = curVal;
+  document.getElementById('sectionList').innerHTML = sections.map(s=>`<option value="${escapeHtml(s)}">`).join('');
+
+  const filtered = getFiltered();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  if(currentPage > totalPages) currentPage = totalPages;
+  const startIdx = (currentPage - 1) * PAGE_SIZE;
+  const pageItems = filtered.slice(startIdx, startIdx + PAGE_SIZE);
+
+  const holder = document.getElementById('tableHolder');
+  const pagDiv = document.getElementById('pagination');
+
+  if(products.length === 0){
+    holder.innerHTML = '<div class="empty"><b>No items yet</b>Store la irukkira items add pannunga.</div>';
+    pagDiv.style.display = 'none';
+    return;
+  }
+  if(filtered.length === 0){
+    holder.innerHTML = '<div class="empty"><b>No matches</b>Search or filter maathi paarunga.</div>';
+    pagDiv.style.display = 'none';
+    return;
+  }
+
+  let rows = pageItems.map(p=>{
+    const sc = stockClass(p);
+    return `
+    <tr>
+      <td data-label="Code"><span class="code">${escapeHtml(p.code||'-')}</span></td>
+      <td data-label="Item"><div class="pname">${escapeHtml(p.name)}</div></td>
+      <td data-label="Section"><span class="sec-tag">${escapeHtml(p.section||'-')}</span></td>
+      <td data-label="Location"><span class="loc">${escapeHtml(p.location||'-')}</span></td>
+      <td data-label="Quantity">
+        <div class="qty-cell">
+          <button class="qty-btn" onclick="adjustQty('${p.id}', -1)">-</button>
+          <span class="qty-num">${p.quantity}</span>
+          <button class="qty-btn" onclick="adjustQty('${p.id}', 1)">+</button>
+          <span class="unit">${escapeHtml(p.unit||'')}</span>
+        </div>
+      </td>
+      <td data-label="Price">${money(p.price)}</td>
+      <td data-label="Status"><span class="status-pill ${sc}">${stockText(p)}</span></td>
+      <td data-label="Actions">
+        <div class="row-actions">
+          <button class="icon-btn" onclick="openEdit('${p.id}')" title="Edit">Edit</button>
+          <button class="icon-btn del" onclick="deleteProduct('${p.id}')" title="Delete">Del</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  holder.innerHTML = `
+    <table>
+      <thead><tr><th>Code</th><th>Item</th><th>Section</th><th>Location</th><th>Quantity</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+  pagDiv.style.display = 'flex';
+  document.getElementById('pgInfo').textContent =
+    `Showing ${(startIdx+1).toLocaleString('en-IN')}-${Math.min(startIdx+PAGE_SIZE, filtered.length).toLocaleString('en-IN')} of ${filtered.length.toLocaleString('en-IN')}`;
+  document.getElementById('prevBtn').disabled = currentPage <= 1;
+  document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+}
+
+async function adjustQty(id, delta){
+  if(!requireEditor()) return;
+  const p = products.find(x=>x.id===id);
+  if(!p) return;
+  p.quantity = Math.max(0, (p.quantity||0) + delta);
+  render();
+  await saveProducts();
+}
+
+function openAdd(){
+  if(!requireEditor()) return;
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Add item';
+  document.getElementById('f_name').value = '';
+  document.getElementById('f_code').value = '';
+  document.getElementById('f_section').value = '';
+  document.getElementById('f_location').value = '';
+  document.getElementById('f_unit').value = 'Nos';
+  document.getElementById('f_quantity').value = '';
+  document.getElementById('f_threshold').value = '2';
+  document.getElementById('f_price').value = '';
+  clearErrors();
+  document.getElementById('overlay').classList.add('show');
+}
+
+function openEdit(id){
+  if(!requireEditor()) return;
+  const p = products.find(x=>x.id===id);
+  if(!p) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit item';
+  document.getElementById('f_name').value = p.name;
+  document.getElementById('f_code').value = p.code||'';
+  document.getElementById('f_section').value = p.section||'';
+  document.getElementById('f_location').value = p.location||'';
+  document.getElementById('f_unit').value = p.unit||'Nos';
+  document.getElementById('f_quantity').value = p.quantity;
+  document.getElementById('f_threshold').value = p.threshold||0;
+  document.getElementById('f_price').value = p.price||'';
+  clearErrors();
+  document.getElementById('overlay').classList.add('show');
+}
+
+function closeModal(){ document.getElementById('overlay').classList.remove('show'); }
+function clearErrors(){
+  document.getElementById('err_name').classList.remove('show');
+  document.getElementById('err_quantity').classList.remove('show');
+}
+
+async function saveProduct(){
+  const name = document.getElementById('f_name').value.trim();
+  const qtyRaw = document.getElementById('f_quantity').value;
+  clearErrors();
+  let valid = true;
+  if(!name){ document.getElementById('err_name').classList.add('show'); valid = false; }
+  if(qtyRaw === '' || isNaN(qtyRaw) || Number(qtyRaw) < 0){ document.getElementById('err_quantity').classList.add('show'); valid = false; }
+  if(!valid) return;
+
+  const data = {
+    name: name,
+    code: document.getElementById('f_code').value.trim(),
+    section: document.getElementById('f_section').value.trim() || 'Uncategorized',
+    location: document.getElementById('f_location').value.trim(),
+    unit: document.getElementById('f_unit').value.trim() || 'Nos',
+    quantity: Number(qtyRaw),
+    threshold: Number(document.getElementById('f_threshold').value || 0),
+    price: Number(document.getElementById('f_price').value || 0)
+  };
+
+  if(editingId){
+    const p = products.find(x=>x.id===editingId);
+    Object.assign(p, data);
+  } else {
+    products.push({ id: uid(), ...data });
+  }
+  closeModal();
+  render();
+  await saveProducts();
+}
+
+async function deleteProduct(id){
+  if(!requireEditor()) return;
+  const p = products.find(x=>x.id===id);
+  if(!p) return;
+  if(!confirm(`"${p.name}" nu delete pannalama?`)) return;
+  products = products.filter(x=>x.id!==id);
+  render();
+  await saveProducts();
+}
+
+document.getElementById('addBtn').addEventListener('click', openAdd);
+document.getElementById('exportBtn').addEventListener('click', exportData);
+document.getElementById('importBtn').addEventListener('click', ()=>document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', importData);
+document.getElementById('cancelBtn').addEventListener('click', closeModal);
+document.getElementById('saveBtn').addEventListener('click', saveProduct);
+document.getElementById('overlay').addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeModal(); });
+document.getElementById('searchBox').addEventListener('input', (e)=>{ searchTerm = e.target.value; currentPage = 1; render(); });
+document.getElementById('sectionFilter').addEventListener('change', (e)=>{ sectionFilter = e.target.value; currentPage = 1; render(); });
+document.getElementById('prevBtn').addEventListener('click', ()=>{ if(currentPage>1){ currentPage--; render(); window.scrollTo(0,0); } });
+document.getElementById('nextBtn').addEventListener('click', ()=>{ currentPage++; render(); window.scrollTo(0,0); });
+
+document.getElementById('loginBtn').addEventListener('click', openLogin);
+document.getElementById('logoutBtn').addEventListener('click', logout);
+document.getElementById('loginCancelBtn').addEventListener('click', closeLogin);
+document.getElementById('loginSubmitBtn').addEventListener('click', tryLogin);
+document.getElementById('loginOverlay').addEventListener('click', (e)=>{ if(e.target.id==='loginOverlay') closeLogin(); });
+document.getElementById('f_password').addEventListener('keydown', (e)=>{ if(e.key==='Enter') tryLogin(); });
+
+loadProducts();
+</script>
+</body>
+</html>
